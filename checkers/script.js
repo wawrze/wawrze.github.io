@@ -19,7 +19,7 @@
     });
 
     //init
-    gStatus.text("Not connected to application.");
+    gStatus.text("Not connected to application. Please, wait for a while...");
     getAllAvailableRulesSets();
 
     function getAllAvailableRulesSets() {
@@ -67,16 +67,22 @@
                 $('[man-capture-backward]').text(rules.pawnCaptureBackward ? "yes" : "no");
                 $('[king-range]').text(rules.queenRangeOne ? "one field" : "any");
                 $('[king-move-after-capture]').text(rules.queenRangeOneAfterCapture ? "one field" : "any");
+            },
+            statusCode: {
+                403: function () {
+                    gStatus.text("There is no rules set named \"" + gameRulesName + "\" - possible application error.");
+                }
             }
         });
     }
 
     function createGame() {
         const requestUrl = apiRoot + 'newGame';
-        
+
         gameName = $('[game-name]').val();
         var gameRulesName = $('[rules-set-select]').val();
         var blackPlayer = "false";
+        var error = 0;
 
         if ($('[black-player-select]').val() == "Computer") {
             blackPlayer = "true";
@@ -96,10 +102,11 @@
             return;
         }
 
+        gStatus.text("Game started.");
+
         $.ajax({
             url: requestUrl,
             method: 'POST',
-            processData: false,
             contentType: "application/json; charset=utf-8",
             dataType: 'json',
             data: JSON.stringify({
@@ -107,7 +114,10 @@
                 rulesName: gameRulesName,
                 isBlackAIPlayer: blackPlayer,
                 isWhiteAIPlayer: whitePlayer
-            })
+            }),
+            error: function () {
+                gStatus.text("Application error.");
+            }
         });
 
         $('[created-game-name]').text(gameName);
@@ -118,7 +128,7 @@
         $('[status]')[1].style.display = 'block';
         $('[next-move]')[0].style.display = 'inline-block';
         $('[send-move-button]')[0].style.display = 'inline-block';
-        
+
         if (blackPlayer == "true" && whitePlayer == "true") {
             gStatus[0].style.display = 'none';
             $('[next-move-input]').text("Enter button to see next move:");
@@ -127,7 +137,6 @@
             $('[send-move-button]').focus();
         }
         else {
-            gStatus.text("Game started.");
             $('[next-move-input]').text("Enter your next move:");
             $('[send-move-button]').text("Send move");
             $('[next-move]').focus();
@@ -169,20 +178,25 @@
             },
             error: function (xhr, textStatus, err) {
                 gStatus.text("Application error.");
+            },
+            statusCode: {
+                403: function () {
+                    gStatus.text("There is no game named \"" + gameName + "\" - possible application error.");
+                }
             }
         });
     }
 
     function getBoard() {
         const requestUrl = apiRoot + 'getBoard?gameName=' + gameName;
-        
+
         $.ajax({
             url: requestUrl,
             method: 'GET',
             contentType: "application/json;charset=UTF-8",
             success: function (chessboard) {
-                for (var i = 0; i < 7; i+=2) {
-                    for (var j = 2; j < 9; j+=2) {
+                for (var i = 0; i < 7; i += 2) {
+                    for (var j = 2; j < 9; j += 2) {
                         for (var k = 0; k < 4; k++) {
                             board.children()[i].children[j].children[k].style.display = 'none';
                         }
@@ -197,7 +211,7 @@
                 }
                 gStatus.text(chessboard.gameStatus);
                 chessboard.rows.forEach(row => {
-                    row.figures.forEach(figure =>  {
+                    row.figures.forEach(figure => {
                         if (figure.name == "pawn") {
                             if (figure.color == "true") {
                                 board.children()[row.name].children[figure.col].children[0].style.display = 'block';
@@ -213,7 +227,7 @@
                             else {
                                 board.children()[row.name].children[figure.col].children[3].style.display = 'block';
                             }
-                        }   
+                        }
                     });
                 });
                 mHistory.text(chessboard.movesHistory);
@@ -255,6 +269,11 @@
             },
             error: function (xhr, textStatus, err) {
                 gStatus.text("Application error.");
+            },
+            statusCode: {
+                403: function () {
+                    gStatus.text("There is no game named \"" + gameName + "\" - possible application error.");
+                }
             }
         });
     }
@@ -327,6 +346,11 @@
             },
             error: function (xhr, textStatus, err) {
                 gStatus.text("Application error.");
+            },
+            statusCode: {
+                403: function () {
+                    gStatus.text("There is no game named \"" + gameName + "\" - possible application error.");
+                }
             }
         });
     }
@@ -351,7 +375,12 @@
 
         $.ajax({
             url: requestUrl,
-            method: 'DELETE'
+            method: 'DELETE',
+            statusCode: {
+                403: function () {
+                    gStatus.text("There is no game named \"" + gameName + "\" - possible application error.");
+                }
+            }
         });
     }
 
@@ -361,5 +390,5 @@
     $('[rules-set-select]').change(function () {
         getSelectedRulesSet();
     });
-        
+
 });
