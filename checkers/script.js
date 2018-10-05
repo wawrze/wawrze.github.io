@@ -1,6 +1,6 @@
 ﻿$(document).ready(function () {
 
-    const apiRoot = 'https://restcheckers.herokuapp.com/game/'
+    const apiRoot = 'https://restcheckers.herokuapp.com/v1/'
     const board = $('[board]');
     const gStatus = $('[gameStatus]');
     const mHistory = $('[movesHistory]');
@@ -11,6 +11,7 @@
     var availableRulesSets = {};
     var availableRulesSetsLength;
     var gameName;
+    var gameId;
 
     $('[next-move]').on('keydown', function () {
         if (event.keyCode == 13) {
@@ -23,7 +24,7 @@
     getAllAvailableRulesSets();
 
     function getAllAvailableRulesSets() {
-        var requestUrl = apiRoot + 'getRulesSets';
+        var requestUrl = apiRoot + 'rules';
 
         $.ajax({
             url: requestUrl,
@@ -53,7 +54,7 @@
 
     function getSelectedRulesSet() {
         var gameRulesName = $('[rules-set-select]').val()
-        var requestUrl = apiRoot + 'getRulesSet?rulesSetName=' + gameRulesName;
+        var requestUrl = apiRoot + 'rules/' + gameRulesName;
 
         $.ajax({
             url: requestUrl,
@@ -75,19 +76,18 @@
             }
         });
     }
-
+    
     function createGame() {
-        const requestUrl = apiRoot + 'newGame';
-
+        const requestUrl = apiRoot + 'games/new';
+        
         gameName = $('[game-name]').val();
         var gameRulesName = $('[rules-set-select]').val();
         var blackPlayer = "false";
-        var error = 0;
+        var whitePlayer = "false";
 
         if ($('[black-player-select]').val() == "Computer") {
             blackPlayer = "true";
         }
-        var whitePlayer = "false";
         if ($('[white-player-select]').val() == "Computer") {
             whitePlayer = "true";
         }
@@ -103,7 +103,7 @@
         }
 
         gStatus.text("Game started.");
-
+        
         $.ajax({
             url: requestUrl,
             method: 'POST',
@@ -115,11 +115,16 @@
                 isBlackAIPlayer: blackPlayer,
                 isWhiteAIPlayer: whitePlayer
             }),
+            success: function (id) {
+                $('[game-id]').text(id);
+                getGameInfo();
+                playGame();
+            },
             error: function () {
                 gStatus.text("Application error.");
             }
         });
-
+        
         $('[created-game-name]').text(gameName);
         $('[new-game-section]')[0].style.display = 'none';
         $('[created-game-section]')[0].style.display = 'block';
@@ -128,7 +133,7 @@
         $('[status]')[1].style.display = 'block';
         $('[next-move]')[0].style.display = 'inline-block';
         $('[send-move-button]')[0].style.display = 'inline-block';
-
+        
         if (blackPlayer == "true" && whitePlayer == "true") {
             gStatus[0].style.display = 'none';
             $('[next-move-input]').text("Enter button to see next move:");
@@ -141,18 +146,20 @@
             $('[send-move-button]').text("Send move");
             $('[next-move]').focus();
         }
+    }
 
-        var start = new Date().getTime();
-        for (var i = 0; i < 1e7; i++) {
-            if ((new Date().getTime() - start) > 500) {
-                break;
-            }
-        }
-        getBoard();
+    function playGame() {
+        const requestUrl = apiRoot + 'games/' + $('[game-id]').text();
+
+        $.ajax({
+            url: requestUrl,
+            method: 'POST',
+            contentType: "application/json; charset=utf-8"
+        });
     }
 
     function sendMove() {
-        var requestUrl = apiRoot + 'sendMove?gameName=' + gameName;
+        var requestUrl = apiRoot + 'games/' + $('[game-id]').text();
         var moveToSend;
 
         if ($('[black-player-select]').val() == "Computer" && $('[white-player-select]').val() == "Computer") {
@@ -164,7 +171,7 @@
 
         $.ajax({
             url: requestUrl,
-            method: 'POST',
+            method: 'PUT',
             processData: false,
             contentType: "application/json;charset=UTF-8",
             dataType: 'json',
@@ -172,7 +179,7 @@
                 move: moveToSend
             }),
             success: function () {
-                getBoard();
+                getGameInfo();
                 $('[next-move]').val("");
                 $('[next-move]').focus();
             },
@@ -187,16 +194,16 @@
         });
     }
 
-    function getBoard() {
-        const requestUrl = apiRoot + 'getBoard?gameName=' + gameName;
-
+    function getGameInfo() {
+        const requestUrl = apiRoot + 'games/' + $('[game-id]').text();
+        
         $.ajax({
             url: requestUrl,
             method: 'GET',
             contentType: "application/json;charset=UTF-8",
-            success: function (chessboard) {
-                for (var i = 0; i < 7; i += 2) {
-                    for (var j = 2; j < 9; j += 2) {
+            success: function (gameInfo) {
+                for (var i = 0; i < 7; i+=2) {
+                    for (var j = 2; j < 9; j+=2) {
                         for (var k = 0; k < 4; k++) {
                             board.children()[i].children[j].children[k].style.display = 'none';
                         }
@@ -209,9 +216,9 @@
                         }
                     }
                 }
-                gStatus.text(chessboard.gameStatus);
-                chessboard.rows.forEach(row => {
-                    row.figures.forEach(figure => {
+                gStatus.text(gameInfo.gameStatus);
+                gameInfo.board.rows.forEach(row => {
+                    row.figures.forEach(figure =>  {
                         if (figure.name == "pawn") {
                             if (figure.color == "true") {
                                 board.children()[row.name].children[figure.col].children[0].style.display = 'block';
@@ -227,33 +234,33 @@
                             else {
                                 board.children()[row.name].children[figure.col].children[3].style.display = 'block';
                             }
-                        }
+                        }   
                     });
                 });
-                mHistory.text(chessboard.movesHistory);
-                if (chessboard.blackAIPlayer) {
+                mHistory.text(gameInfo.movesHistory);
+                if (gameInfo.blackAIPlayer) {
                     blackPlayer.text("(Computer)");
                 }
                 else {
-                    if (chessboard.activePlayer) {
+                    if (gameInfo.activePlayer) {
                         blackPlayer.text("(Human)\n(ACTIVE)");
                     }
                     else {
                         blackPlayer.text("(Human)");
                     }
                 }
-                if (chessboard.whiteAIPlayer) {
+                if (gameInfo.whiteAIPlayer) {
                     whitePlayer.text("(Computer)");
                 }
                 else {
-                    if (chessboard.activePlayer) {
+                    if (gameInfo.activePlayer) {
                         whitePlayer.text("(Human)");
                     }
                     else {
                         whitePlayer.text("(Human)\n(ACTIVE)");
                     }
                 }
-                if (chessboard.activePlayer) {
+                if (gameInfo.activePlayer) {
                     status.children()[0].style.background = 'black';
                     status.children()[1].style.background = 'black';
                     status.children()[0].style.color = 'white';
@@ -265,32 +272,25 @@
                     status.children()[0].style.color = 'black';
                     status.children()[1].style.color = 'black';
                 }
-                updateGameDetails();
-            },
-            error: function (xhr, textStatus, err) {
-                gStatus.text("Application error.");
-            },
-            statusCode: {
-                403: function () {
-                    gStatus.text("There is no game named \"" + gameName + "\" - possible application error.");
+                if (gameInfo.blackAIPlayer && gameInfo.whiteAIPlayer) {
+                    gStatus[0].style.display = 'none';
+                    $('[black-player-select]').val("Computer");
+                    $('[white-player-select]').val("Computer");
+                    $('[next-move-input]').text("Enter button to see next move:");
+                    $('[next-move]')[0].style.display = 'none';
+                    $('[send-move-button]').text("Next move");
+                    $('[send-move-button]').focus();
                 }
-            }
-        });
-    }
-
-    function updateGameDetails() {
-        const requestUrl = apiRoot + 'getGameProgressDetails?gameName=' + gameName;
-
-        $.ajax({
-            url: requestUrl,
-            method: 'GET',
-            contentType: "application/json;charset=UTF-8",
-            success: function (gameDetails) {
-                if (gameDetails.finished) {
+                else {
+                    $('[next-move-input]').text("Enter your next move:");
+                    $('[send-move-button]').text("Send move");
+                    $('[next-move]').focus();
+                }
+                if (gameInfo.finished) {
                     $('[game-in-progress]')[0].style.display = 'none';
                     $('[game-finished]')[0].style.display = 'block';
                     $('[next-move-section]')[0].style.display = 'block';
-                    if (gameDetails.draw) {
+                    if (gameInfo.draw) {
                         $('[game-finished]')[0].style.background = 'grey';
                         $('[game-finished]')[0].style.color = 'black';
                         $('[status]')[1].style.background = 'grey';
@@ -299,18 +299,13 @@
                         $('[type-of-game-finish]').text("(Each player has done 15 moves in the row by a king.)");
                     }
                     else {
-                        if (gameDetails.winner) {
+                        $('[type-of-game-finish]').text("(" + gameInfo.typeOfWin + ")");
+                        if (gameInfo.winner) {
                             $('[winner-or-draw]').text("BLACK WINS");
                             $('[game-finished]')[0].style.background = 'black';
                             $('[game-finished]')[0].style.color = 'white';
                             $('[status]')[1].style.background = 'black';
                             $('[next-move-section]')[0].style.background = 'black';
-                            if (gameDetails.whitePawns == 0 && gameDetails.whiteQueens == 0) {
-                                $('[type-of-game-finish]').text("(White player lost all his figures.)");
-                            }
-                            else {
-                                $('[type-of-game-finish]').text("(White player cannot move.)");
-                            }
                         }
                         else {
                             $('[winner-or-draw]').text("WHITE WINS");
@@ -318,12 +313,6 @@
                             $('[game-finished]')[0].style.color = 'black';
                             $('[status]')[1].style.background = 'white';
                             $('[next-move-section]')[0].style.background = 'white';
-                            if (gameDetails.blackPawns == 0 && gameDetails.blackQueens == 0) {
-                                $('[type-of-game-finish]').text("(Black player lost all his figures.)");
-                            }
-                            else {
-                                $('[type-of-game-finish]').text("(Black player cannot move.)");
-                            }
                         }
                     }
                     $('[new-game-section]')[0].style.display = 'block';
@@ -335,13 +324,13 @@
                 else {
                     $('[game-in-progress]')[0].style.display = 'block';
                     $('[game-finished]')[0].style.display = 'none';
-                    $('[moves-done]').text(gameDetails.moves);
-                    $('[white-man]').text(gameDetails.whitePawns);
-                    $('[black-man]').text(gameDetails.blackPawns);
-                    $('[white-kings]').text(gameDetails.whiteQueens);
-                    $('[black-kings]').text(gameDetails.blackQueens);
-                    $('[white-kings-moves]').text(gameDetails.whiteQueenMoves);
-                    $('[black-kings-moves]').text(gameDetails.blackQueenMoves);
+                    $('[moves-done]').text(gameInfo.moves);
+                    $('[white-man]').text(gameInfo.whitePawns);
+                    $('[black-man]').text(gameInfo.blackPawns);
+                    $('[white-kings]').text(gameInfo.whiteQueens);
+                    $('[black-kings]').text(gameInfo.blackQueens);
+                    $('[white-kings-moves]').text(gameInfo.whiteQueenMoves);
+                    $('[black-kings-moves]').text(gameInfo.blackQueenMoves);
                 }
             },
             error: function (xhr, textStatus, err) {
@@ -371,7 +360,7 @@
         $('[next-move]')[0].style.display = 'none';
         $('[send-move-button]')[0].style.display = 'none';
 
-        var requestUrl = apiRoot + 'deleteGame?gameName=' + gameName;
+        var requestUrl = apiRoot + 'games/' + $('[game-id]').text();
 
         $.ajax({
             url: requestUrl,
@@ -390,5 +379,5 @@
     $('[rules-set-select]').change(function () {
         getSelectedRulesSet();
     });
-
+        
 });
