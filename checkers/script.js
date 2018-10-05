@@ -146,6 +146,8 @@
             $('[send-move-button]').text("Send move");
             $('[next-move]').focus();
         }
+
+        getGameInfo();
     }
 
     function playGame() {
