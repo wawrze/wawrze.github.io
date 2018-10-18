@@ -142,6 +142,7 @@
             $('[send-move-button]').focus();
         }
         else {
+            gStatus[0].style.display = 'block';
             $('[next-move-input]').text("Enter your next move:");
             $('[send-move-button]').text("Send move");
             $('[next-move]').focus();
