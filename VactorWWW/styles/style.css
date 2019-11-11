@@ -1,7 +1,7 @@
 body {
     padding-top: 56px;
     background: #142352;
-    color: white;
+    color: #C4C4C4;
 }
 
 a {
@@ -14,4 +14,20 @@ footer {
 
 .container {
     text-align: center;
+}
+
+li {
+    text-align: left;
+}
+
+.lead {
+    text-align: left;
+    color: chocolate;
+}
+
+blockquote {
+    font-style: italic;
+    text-align: left;
+    border: solid 1px;
+    padding: 5px;
 }
