@@ -1,0 +1,17 @@
+body {
+    padding-top: 56px;
+    background: #142352;
+    color: white;
+}
+
+a {
+    color: #949494;
+}
+
+footer {
+    color: #949494;
+}
+
+.container {
+    text-align: center;
+}
