@@ -1,19 +1,15 @@
 body {
-    padding-top: 56px;
-    background: #142352;
-    color: #C4C4C4;
+    padding-top: 30px;
+    background: #FFFFFF;
+    color: #545454;
 }
 
 a {
-    color: #949494;
+    color: #142352;
 }
 
 footer {
     color: #949494;
-}
-
-.container {
-    text-align: center;
 }
 
 li {
@@ -22,7 +18,15 @@ li {
 
 .lead {
     text-align: left;
-    color: chocolate;
+    color: #142352;
+    font-weight: bold;
+}
+
+.section-header {
+    text-align: center;
+    background: #142352;
+    padding: 10px;
+    color: #C4C4C4;
 }
 
 blockquote {
@@ -30,4 +34,8 @@ blockquote {
     text-align: left;
     border: solid 1px;
     padding: 5px;
+}
+
+.bg-blue {
+    background: #142352;
 }
